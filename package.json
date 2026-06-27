@@ -1,0 +1,45 @@
+{
+  "name": "aura",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AURA — A zen-themed full-stack habit tracking dashboard with intelligent streak analytics",
+  "type": "module",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c blue,green \"npm run dev -w server\" \"npm run dev -w client\"",
+    "dev:server": "npm run dev -w server",
+    "dev:client": "npm run dev -w client",
+    "build": "npm run build -w client",
+    "test": "npm run test -w server && npm run test -w client",
+    "test:server": "npm run test -w server",
+    "test:client": "npm run test -w client",
+    "test:coverage": "npm run test:coverage -w server && npm run test:coverage -w client",
+    "lint": "eslint . --ext .js,.jsx,.cjs,.mjs",
+    "lint:fix": "eslint . --ext .js,.jsx,.cjs,.mjs --fix",
+    "format": "prettier --write \"**/*.{js,jsx,cjs,mjs,json,css,md}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,cjs,mjs,json,css,md}\"",
+    "db:migrate": "npm run db:migrate -w server",
+    "db:studio": "npm run db:studio -w server",
+    "db:seed": "npm run db:seed -w server",
+    "prepare": "echo 'ready'"
+  },
+  "keywords": [
+    "habit-tracker",
+    "productivity",
+    "full-stack",
+    "react",
+    "express",
+    "prisma",
+    "streak-engine"
+  ],
+  "author": "Srinidhi",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "eslint": "^9.16.0",
+    "prettier": "^3.4.2"
+  }
+}

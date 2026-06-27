@@ -1,0 +1,75 @@
+// AURA Habit Tracker — Prisma Schema
+// Uses SQLite for local dev; designed for Postgres compatibility in production.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  avatarSeed   String?
+  bio          String?
+  dailyGoal    Int      @default(50)
+  timezone     String   @default("UTC")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  habits        Habit[]
+  refreshTokens RefreshToken[]
+}
+
+model Habit {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  color     String   @default("#10B981")
+  icon      String   @default("📌")
+  frequency String   // JSON string: {type:'daily'} | {type:'specific_days',days:[0-6]} | {type:'weekly',timesPerWeek:N}
+  priority  String   @default("medium")  // "high" | "medium" | "low"
+  archived  Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs HabitLog[]
+
+  @@index([userId])
+}
+
+model HabitLog {
+  id      String  @id @default(cuid())
+  habitId String
+  date    String  // "YYYY-MM-DD" in user's timezone
+  status  String  // "completed" | "partial" | "missed"
+  notes   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, date])
+  @@index([habitId])
+  @@index([date])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
