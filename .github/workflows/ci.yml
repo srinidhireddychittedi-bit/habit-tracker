@@ -20,17 +20,20 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
       - run: npm ci
-      - run: npm run lint
+      # ESLint v9 uses flat config — no --ext flag needed
+      - run: npx eslint .
 
   test-server:
     name: Server Tests
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: file:./test.db
-      JWT_SECRET: test-secret-do-not-use-in-production
-      JWT_REFRESH_SECRET: test-refresh-secret-do-not-use-in-production
+      # Must match the names used in server/src/middleware/auth.js
+      JWT_ACCESS_SECRET: test-access-secret-do-not-use-in-prod
+      JWT_REFRESH_SECRET: test-refresh-secret-do-not-use-in-prod
       PORT: 3001
       CLIENT_URL: http://localhost:5173
+      NODE_ENV: test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -77,40 +80,3 @@ jobs:
       - run: npm ci
       - run: npx prisma generate --schema=server/prisma/schema.prisma
       - run: npm run build -w client
-
-  # ── Optional: Auto-deploy on merge to main ──────────
-  # Uncomment and configure the sections below to enable auto-deployment.
-  #
-  # deploy-client:
-  #   name: Deploy Client
-  #   runs-on: ubuntu-latest
-  #   needs: [build]
-  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-node@v4
-  #       with:
-  #         node-version: ${{ env.NODE_VERSION }}
-  #         cache: 'npm'
-  #     - run: npm ci
-  #     - run: npm run build -w client
-  #     - name: Deploy to Vercel
-  #       uses: amondnet/vercel-action@v25
-  #       with:
-  #         vercel-token: ${{ secrets.VERCEL_TOKEN }}
-  #         vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-  #         vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-  #         working-directory: client
-  #
-  # deploy-server:
-  #   name: Deploy Server
-  #   runs-on: ubuntu-latest
-  #   needs: [build]
-  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Deploy to Render
-  #       uses: johnbeynon/render-deploy-action@v0.0.8
-  #       with:
-  #         service-id: ${{ secrets.RENDER_SERVICE_ID }}
-  #         api-key: ${{ secrets.RENDER_API_KEY }}

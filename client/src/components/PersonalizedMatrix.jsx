@@ -2,63 +2,107 @@ import { useRef, useMemo, useState } from 'react';
 import { useHabits } from '../contexts/HabitContext.jsx';
 import { getToday, daysAgo, resolveIcon } from '../lib/utils.js';
 
-// ── Priority config ────────────────────────────────────────
-const PRIORITY_CONFIG = {
-  high:   { label: 'High',   color: '#EF4444', bg: '#FEF2F2', dot: '🔴' },
-  medium: { label: 'Medium', color: '#F59E0B', bg: '#FFFBEB', dot: '🟡' },
-  low:    { label: 'Low',    color: '#10B981', bg: '#ECFDF5', dot: '🟢' },
-};
+// ── Colours ────────────────────────────────────────────────
+// Mint-green matching the original site's aesthetic
+const MINT   = '#10B981';   // emerald — matches Add Habit button & brand
+const AMBER  = '#FBBF24';   // warm amber for partial
+const ROSE   = '#F87171';   // soft rose for missed
+
+const PRIORITY_COLOR = { high: '#F87171', medium: '#FBBF24', low: '#34D399' };
+const PRIORITY_LABEL = { high: 'HIGH', medium: 'MED', low: 'LOW' };
 
 // ── Status cycle ───────────────────────────────────────────
-// null → completed → partial → missed → null (DELETE)
 const STATUS_CYCLE = [null, 'completed', 'partial', 'missed'];
-
 function nextStatus(current) {
   const idx = STATUS_CYCLE.indexOf(current ?? null);
   return STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
 }
 
-function CellButton({ status, isToday, onClick }) {
-  const base = 'w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-150 text-sm font-bold select-none border-2';
+// ── Cell ───────────────────────────────────────────────────
+function Cell({ status, isToday, onClick }) {
+  // Sizes: 28×28px — compact, premium
+  const base = {
+    width: 28, height: 28,
+    borderRadius: 7,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    fontSize: 12, fontWeight: 700,
+    flexShrink: 0,
+  };
 
   if (status === 'completed') return (
-    <button onClick={onClick} title="Completed (click to change)" className={`${base} text-white`}
-      style={{ background: '#10B981', borderColor: '#059669', boxShadow: '0 1px 6px rgba(16,185,129,0.4)' }}>✓</button>
+    <button onClick={onClick} title="Completed — click to change" style={{
+      ...base,
+      background: MINT,
+      color: '#fff',
+      border: `1.5px solid ${MINT}`,
+      boxShadow: `0 2px 8px ${MINT}55`,
+    }}>
+      {/* Elegant thin checkmark */}
+      <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+        <path d="M1 5L4.5 8.5L11 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </button>
   );
+
   if (status === 'partial') return (
-    <button onClick={onClick} title="Partial (click to change)" className={`${base} text-white`}
-      style={{ background: '#F59E0B', borderColor: '#D97706', boxShadow: '0 1px 4px rgba(245,158,11,0.4)' }}>~</button>
+    <button onClick={onClick} title="Partial — click to change" style={{
+      ...base,
+      background: 'transparent',
+      border: `1.5px solid ${AMBER}`,
+      color: AMBER,
+      boxShadow: `0 1px 6px ${AMBER}33`,
+    }}>
+      <svg width="10" height="2" viewBox="0 0 10 2" fill="none">
+        <path d="M1 1H9" stroke={AMBER} strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+    </button>
   );
+
   if (status === 'missed') return (
-    <button onClick={onClick} title="Missed (click to clear)" className={`${base} text-white`}
-      style={{ background: '#EF4444', borderColor: '#DC2626', boxShadow: '0 1px 4px rgba(239,68,68,0.3)' }}>✕</button>
+    <button onClick={onClick} title="Missed — click to clear" style={{
+      ...base,
+      background: `${ROSE}18`,
+      border: `1.5px solid ${ROSE}`,
+      color: ROSE,
+    }}>
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+        <path d="M1 1L9 9M9 1L1 9" stroke={ROSE} strokeWidth="1.8" strokeLinecap="round"/>
+      </svg>
+    </button>
   );
+
+  // Empty cell
   return (
-    <button onClick={onClick} title={isToday ? "Click to mark today" : "Click to mark"}
-      className={`${base} hover:scale-110`}
-      style={{ borderStyle: 'dashed', borderColor: isToday ? '#10B981' : 'var(--border)', background: isToday ? 'rgba(16,185,129,0.05)' : 'transparent' }}
+    <button onClick={onClick} title="Click to mark" style={{
+      ...base,
+      background: isToday ? `${MINT}10` : 'transparent',
+      border: `1px solid ${isToday ? MINT + '60' : 'var(--border)'}`,
+    }}
+    onMouseEnter={e => { e.currentTarget.style.borderColor = MINT + '80'; e.currentTarget.style.background = MINT + '10'; }}
+    onMouseLeave={e => { e.currentTarget.style.borderColor = isToday ? MINT + '60' : 'var(--border)'; e.currentTarget.style.background = isToday ? MINT + '10' : 'transparent'; }}
     />
   );
 }
 
-function getDateRange(numDays) {
-  return Array.from({ length: numDays }, (_, i) => daysAgo(numDays - 1 - i));
+function getDateRange(n) {
+  return Array.from({ length: n }, (_, i) => daysAgo(n - 1 - i));
 }
 
 export default function PersonalizedMatrix({ onAddHabit, onEditHabit }) {
   const { habits, getLog, toggleCompletion, deleteHabit, loading, streakInfo } = useHabits();
   const scrollRef = useRef(null);
-  const today = getToday();
-  const dates = useMemo(() => getDateRange(30), []);
+  const today     = getToday();
+  const dates     = useMemo(() => getDateRange(30), []);
   const [confirm, setConfirm] = useState(null);
 
   function handleCell(habitId, date) {
-    const log = getLog(habitId, date);
+    const log  = getLog(habitId, date);
     const next = nextStatus(log?.status ?? null);
     toggleCompletion(habitId, date, next);
   }
 
-  // Sort habits by priority: high → medium → low
   const sortedHabits = useMemo(() => {
     const order = { high: 0, medium: 1, low: 2 };
     return [...habits].sort((a, b) => (order[a.priority || 'medium'] ?? 1) - (order[b.priority || 'medium'] ?? 1));
@@ -82,22 +126,43 @@ export default function PersonalizedMatrix({ onAddHabit, onEditHabit }) {
       {/* Matrix card */}
       <div className="card overflow-hidden">
         <div ref={scrollRef} className="overflow-x-auto">
-          <table className="border-collapse" style={{ minWidth: `${Math.max(dates.length * 38 + 220, 520)}px` }}>
+          <table className="border-collapse" style={{ minWidth: `${Math.max(dates.length * 36 + 200, 500)}px` }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                <th className="sticky left-0 z-10 px-4 py-3 text-left text-[10px] font-bold tracking-widest uppercase"
-                  style={{ background: 'var(--bg-raised)', color: 'var(--text-muted)', minWidth: 220, borderRight: '1px solid var(--border)' }}>
-                  Habit / Priority
+                {/* Sticky header label */}
+                <th className="sticky left-0 z-10 px-4 py-3 text-left"
+                  style={{
+                    background: 'var(--bg-raised)',
+                    borderRight: '1px solid var(--border)',
+                    minWidth: 200,
+                    fontSize: 10, fontWeight: 700,
+                    letterSpacing: '0.08em', textTransform: 'uppercase',
+                    color: 'var(--text-muted)',
+                  }}>
+                  Configured Habits
                 </th>
                 {dates.map(date => {
                   const isToday = date === today;
                   const d = new Date(date + 'T00:00:00');
                   return (
-                    <th key={date} className="px-0.5 py-2 text-center" style={{ minWidth: 38, background: isToday ? 'rgba(16,185,129,0.08)' : 'var(--bg-raised)' }}>
-                      <div className="text-[9px] font-semibold tracking-wide" style={{ color: isToday ? '#10B981' : 'var(--text-muted)' }}>
-                        {d.toLocaleDateString('en-US', { weekday: 'short' }).slice(0,2).toUpperCase()}
+                    <th key={date} style={{
+                      minWidth: 36, padding: '8px 1px',
+                      textAlign: 'center',
+                      background: isToday ? `${MINT}12` : 'var(--bg-raised)',
+                    }}>
+                      <div style={{
+                        fontSize: 9, fontWeight: 600, letterSpacing: '0.05em',
+                        color: isToday ? MINT : 'var(--text-muted)',
+                        textTransform: 'uppercase',
+                      }}>
+                        {d.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 2)}
                       </div>
-                      <div className="text-xs font-bold" style={{ color: isToday ? '#10B981' : 'var(--text-soft)' }}>{d.getDate()}</div>
+                      <div style={{
+                        fontSize: 12, fontWeight: 700,
+                        color: isToday ? MINT : 'var(--text-soft)',
+                      }}>
+                        {d.getDate()}
+                      </div>
                     </th>
                   );
                 })}
@@ -105,83 +170,102 @@ export default function PersonalizedMatrix({ onAddHabit, onEditHabit }) {
             </thead>
             <tbody>
               {loading && habits.length === 0 ? (
-                <tr><td colSpan={dates.length + 1} className="text-center py-12 text-sm" style={{ color: 'var(--text-muted)' }}>Loading habits…</td></tr>
+                <tr><td colSpan={dates.length + 1} style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)', fontSize: 13 }}>Loading habits…</td></tr>
               ) : sortedHabits.length === 0 ? (
                 <tr>
-                  <td colSpan={dates.length + 1} className="text-center py-16">
-                    <div className="flex flex-col items-center gap-3">
-                      <span className="text-4xl">🌱</span>
-                      <p className="text-sm font-medium" style={{ color: 'var(--text-soft)' }}>No habits yet</p>
-                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Click "Add Habit" to start your journey</p>
+                  <td colSpan={dates.length + 1} style={{ textAlign: 'center', padding: '64px 0' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 36 }}>🌱</span>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-soft)', margin: 0 }}>No habits yet</p>
+                      <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>Click "Add Habit" to start your journey</p>
                     </div>
                   </td>
                 </tr>
               ) : (
                 sortedHabits.map((habit, i) => {
-                  const streak = streakInfo[habit.id];
-                  const priority = PRIORITY_CONFIG[habit.priority || 'medium'];
-                  const icon = resolveIcon(habit.icon);
+                  const streak   = streakInfo[habit.id];
+                  const pColor   = PRIORITY_COLOR[habit.priority || 'medium'];
+                  const pLabel   = PRIORITY_LABEL[habit.priority || 'medium'];
+                  const icon     = resolveIcon(habit.icon);
+                  const rowBg    = i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg)';
 
                   return (
-                    <tr key={habit.id} style={{
-                      borderBottom: '1px solid var(--border)',
-                      background: i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg)',
-                    }}>
-                      {/* Habit name sticky cell */}
-                      <td className="sticky left-0 z-10 px-3 py-2"
-                        style={{ borderRight: '1px solid var(--border)', background: i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg)' }}>
+                    <tr key={habit.id} style={{ borderBottom: '1px solid var(--border)', background: rowBg }}>
+
+                      {/* ── Habit name cell (sticky) ─────────────────── */}
+                      <td className="sticky left-0 z-10"
+                        style={{ background: rowBg, borderRight: '1px solid var(--border)', padding: '10px 12px' }}>
                         <div className="flex items-center justify-between gap-2 group">
                           <div className="flex items-center gap-2 min-w-0">
-                            {/* Color stripe */}
-                            <div className="w-1 h-8 rounded-full flex-shrink-0" style={{ background: habit.color || '#10B981' }} />
-                            {/* Emoji icon */}
-                            <span className="text-xl leading-none flex-shrink-0" title={`Icon: ${habit.icon}`}>{icon}</span>
-                            <div className="min-w-0">
-                              <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>{habit.name}</div>
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                {/* Priority badge */}
-                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide"
-                                  style={{ background: priority.bg, color: priority.color }}>
-                                  {priority.dot} {priority.label}
+
+                            {/* Colored bar */}
+                            <div style={{
+                              width: 3, height: 32, borderRadius: 3, flexShrink: 0,
+                              background: habit.color || MINT,
+                            }} />
+
+                            {/* Emoji */}
+                            <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{icon}</span>
+
+                            {/* Name + priority inline */}
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {habit.name}
                                 </span>
-                                {/* Streak */}
-                                {streak?.currentStreak > 0 && (
-                                  <span className="text-[9px]" style={{ color: '#F97316' }}>🔥 {streak.currentStreak}d</span>
-                                )}
+                                {/* Priority dot + tiny label — inline, not below */}
+                                <span style={{
+                                  fontSize: 9, fontWeight: 700,
+                                  color: pColor,
+                                  letterSpacing: '0.05em',
+                                  opacity: 0.85,
+                                  flexShrink: 0,
+                                }}>
+                                  ● {pLabel}
+                                </span>
                               </div>
+                              {/* Streak — only if active */}
+                              {streak?.currentStreak > 0 && (
+                                <span style={{ fontSize: 10, color: '#FB923C' }}>
+                                  🔥 {streak.currentStreak} day streak
+                                </span>
+                              )}
                             </div>
                           </div>
-                          {/* Edit/delete buttons (hover) */}
+
+                          {/* Edit / delete (appear on hover) */}
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                            <button onClick={() => onEditHabit(habit)}
-                              className="w-6 h-6 rounded text-xs flex items-center justify-center hover:opacity-70 transition-opacity"
-                              style={{ color: 'var(--text-muted)' }} title="Edit habit">✎</button>
-                            <button onClick={() => setConfirm(habit.id)}
-                              className="w-6 h-6 rounded text-xs flex items-center justify-center hover:text-red-500 transition-colors"
-                              style={{ color: 'var(--text-muted)' }} title="Delete habit">✕</button>
+                            <button onClick={() => onEditHabit(habit)} title="Edit"
+                              style={{ width: 22, height: 22, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer' }}>✎</button>
+                            <button onClick={() => setConfirm(habit.id)} title="Delete"
+                              style={{ width: 22, height: 22, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer' }}>✕</button>
                           </div>
                         </div>
-                        {/* Inline delete confirm */}
+
+                        {/* Delete confirm */}
                         {confirm === habit.id && (
-                          <div className="mt-1.5 flex items-center gap-2 text-xs">
-                            <span style={{ color: 'var(--text-soft)' }}>Delete this habit?</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontSize: 12 }}>
+                            <span style={{ color: 'var(--text-soft)' }}>Delete?</span>
                             <button onClick={() => { deleteHabit(habit.id); setConfirm(null); }}
-                              className="px-2 py-0.5 rounded font-semibold text-white bg-red-500">Yes</button>
+                              style={{ padding: '2px 10px', borderRadius: 5, background: '#EF4444', color: '#fff', fontWeight: 600, fontSize: 11, cursor: 'pointer' }}>Yes</button>
                             <button onClick={() => setConfirm(null)}
-                              className="px-2 py-0.5 rounded font-semibold"
-                              style={{ background: 'var(--bg-raised)', color: 'var(--text-muted)' }}>No</button>
+                              style={{ padding: '2px 10px', borderRadius: 5, background: 'var(--bg-raised)', color: 'var(--text-muted)', fontWeight: 600, fontSize: 11, cursor: 'pointer' }}>No</button>
                           </div>
                         )}
                       </td>
 
-                      {/* Date cells */}
+                      {/* ── Date cells ───────────────────────────────── */}
                       {dates.map(date => {
                         const isToday = date === today;
-                        const log = getLog(habit.id, date);
+                        const log     = getLog(habit.id, date);
                         return (
-                          <td key={date} className="px-0.5 py-1.5 text-center"
-                            style={{ background: isToday ? 'rgba(16,185,129,0.04)' : 'transparent' }}>
-                            <CellButton
+                          <td key={date} style={{
+                            padding: '0 4px',
+                            textAlign: 'center',
+                            verticalAlign: 'middle',
+                            background: isToday ? `${MINT}06` : 'transparent',
+                          }}>
+                            <Cell
                               status={log?.status ?? null}
                               isToday={isToday}
                               onClick={() => handleCell(habit.id, date)}
@@ -198,12 +282,31 @@ export default function PersonalizedMatrix({ onAddHabit, onEditHabit }) {
         </div>
 
         {/* Legend */}
-        <div className="flex flex-wrap items-center gap-4 px-4 py-2.5 border-t text-xs"
-          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
-          <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded bg-emerald-500 inline-flex items-center justify-center text-white text-[10px]">✓</span>Completed</span>
-          <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded bg-amber-400 inline-flex items-center justify-center text-white text-[10px]">~</span>Partial</span>
-          <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded bg-red-400 inline-flex items-center justify-center text-white text-[10px]">✕</span>Missed</span>
-          <span className="ml-auto text-[10px]">← scroll to see older days</span>
+        <div style={{
+          display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 16,
+          padding: '10px 16px',
+          borderTop: '1px solid var(--border)',
+          fontSize: 11, color: 'var(--text-muted)',
+        }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 16, height: 16, borderRadius: 5, background: MINT, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </span>
+            Completed
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 16, height: 16, borderRadius: 5, border: `1.5px solid ${AMBER}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="7" height="1.5" viewBox="0 0 7 1.5" fill="none"><path d="M0.5 0.75H6.5" stroke={AMBER} strokeWidth="1.5" strokeLinecap="round"/></svg>
+            </span>
+            Partial
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 16, height: 16, borderRadius: 5, border: `1.5px solid ${ROSE}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="7" height="7" viewBox="0 0 7 7" fill="none"><path d="M1 1L6 6M6 1L1 6" stroke={ROSE} strokeWidth="1.5" strokeLinecap="round"/></svg>
+            </span>
+            Missed
+          </span>
+          <span style={{ marginLeft: 'auto', fontSize: 10 }}>← scroll to see older days</span>
         </div>
       </div>
     </section>
