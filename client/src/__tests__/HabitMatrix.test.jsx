@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 
 // Mock the contexts
 const mockToggleCompletion = vi.fn();
@@ -19,7 +18,7 @@ vi.mock('../contexts/HabitContext.jsx', () => ({
     addHabit: mockAddHabit,
     updateHabit: vi.fn(),
     deleteHabit: mockDeleteHabit,
-    streakInfo: { currentStreak: 5, bestStreak: 12 },
+    streakInfo: {},
     refetch: mockRefetch,
   }),
   HabitProvider: ({ children }) => children,
@@ -38,8 +37,8 @@ vi.mock('../contexts/ThemeContext.jsx', () => ({
   ThemeProvider: ({ children }) => children,
 }));
 
-// We need to import after mocks
-let HabitMatrix;
+// Import after mocks
+let PersonalizedMatrix;
 let mockHabits = [];
 let mockLoading = false;
 let mockError = null;
@@ -51,60 +50,49 @@ beforeEach(async () => {
   mockError = null;
   mockGetLog.mockReturnValue(null);
 
-  // Dynamic import after mocks
-  const module = await import('../components/HabitMatrix.jsx');
-  HabitMatrix = module.default;
+  // Dynamic import after mocks are set
+  const module = await import('../components/PersonalizedMatrix.jsx');
+  PersonalizedMatrix = module.default;
 });
 
-describe('HabitMatrix', () => {
-  it('renders the AURA header', () => {
-    mockHabits = [];
-    render(<HabitMatrix />);
-    expect(screen.getByText('AURA')).toBeTruthy();
+describe('PersonalizedMatrix', () => {
+  it('renders the Habit Matrix header', () => {
+    render(<PersonalizedMatrix onAddHabit={vi.fn()} onEditHabit={vi.fn()} />);
+    expect(screen.getByText(/Habit Matrix/i)).toBeTruthy();
   });
 
   it('shows empty state when no habits exist', () => {
-    mockHabits = [];
-    render(<HabitMatrix />);
-    expect(screen.getByText(/your habit garden is empty/i)).toBeTruthy();
-    expect(screen.getByText(/add your first habit/i)).toBeTruthy();
+    render(<PersonalizedMatrix onAddHabit={vi.fn()} onEditHabit={vi.fn()} />);
+    expect(screen.getByText(/No habits yet/i)).toBeTruthy();
   });
 
-  it('renders habit list when habits exist', () => {
+  it('shows Add Habit button', () => {
+    render(<PersonalizedMatrix onAddHabit={vi.fn()} onEditHabit={vi.fn()} />);
+    // Use role to get exactly the button, not the hint text in empty state
+    expect(screen.getByRole('button', { name: /add habit/i })).toBeTruthy();
+  });
+
+  it('renders habit names when habits exist', () => {
     mockHabits = [
-      { id: 'h1', name: 'Meditation', color: '#10B981', icon: 'Leaf', frequency: { type: 'daily' } },
-      { id: 'h2', name: 'Exercise', color: '#3B82F6', icon: 'Dumbbell', frequency: { type: 'daily' } },
+      { id: 'h1', name: 'Meditation', color: '#10B981', icon: '🧘', frequency: { type: 'daily' }, priority: 'medium' },
+      { id: 'h2', name: 'Exercise',   color: '#3B82F6', icon: '💪', frequency: { type: 'daily' }, priority: 'high' },
     ];
-    render(<HabitMatrix />);
+    render(<PersonalizedMatrix onAddHabit={vi.fn()} onEditHabit={vi.fn()} />);
     expect(screen.getByText('Meditation')).toBeTruthy();
     expect(screen.getByText('Exercise')).toBeTruthy();
   });
 
-  it('shows streak cards when streaks are non-zero', () => {
-    mockHabits = [
-      { id: 'h1', name: 'Meditation', color: '#10B981', icon: 'Leaf', frequency: { type: 'daily' } },
-    ];
-    render(<HabitMatrix />);
-    expect(screen.getByText('5')).toBeTruthy(); // currentStreak
-    expect(screen.getByText('12')).toBeTruthy(); // bestStreak
+  it('shows legend items', () => {
+    render(<PersonalizedMatrix onAddHabit={vi.fn()} onEditHabit={vi.fn()} />);
+    expect(screen.getByText('Completed')).toBeTruthy();
+    expect(screen.getByText('Partial')).toBeTruthy();
+    expect(screen.getByText('Missed')).toBeTruthy();
   });
 
-  it('shows progress bar with correct count', () => {
-    mockHabits = [
-      { id: 'h1', name: 'Meditation', color: '#10B981', icon: 'Leaf', frequency: { type: 'daily' } },
-      { id: 'h2', name: 'Exercise', color: '#3B82F6', icon: 'Dumbbell', frequency: { type: 'daily' } },
-    ];
-    mockGetLog.mockImplementation((id) => {
-      if (id === 'h1') return { status: 'completed' };
-      return null;
-    });
-    render(<HabitMatrix />);
-    expect(screen.getByText('1/2')).toBeTruthy();
-  });
-
-  it('shows error state on fetch error', () => {
-    mockError = 'Network error';
-    render(<HabitMatrix />);
-    expect(screen.getByText(/couldn't load your habits/i)).toBeTruthy();
+  it('shows date column headers', () => {
+    render(<PersonalizedMatrix onAddHabit={vi.fn()} onEditHabit={vi.fn()} />);
+    // Should show some day numbers (at least today's date is visible)
+    const today = new Date().getDate().toString();
+    expect(screen.getByText(today)).toBeTruthy();
   });
 });

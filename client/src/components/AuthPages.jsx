@@ -80,9 +80,10 @@ export default function AuthPages() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'register' && (
               <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                <label htmlFor="auth-name" className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
                   style={{ color: 'var(--text-muted)' }}>Your Name</label>
                 <input
+                  id="auth-name"
                   type="text"
                   value={name}
                   onChange={e => setName(e.target.value)}
@@ -96,9 +97,10 @@ export default function AuthPages() {
             )}
 
             <div>
-              <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+              <label htmlFor="auth-email" className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
                 style={{ color: 'var(--text-muted)' }}>Email</label>
               <input
+                id="auth-email"
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -113,10 +115,11 @@ export default function AuthPages() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+              <label htmlFor="auth-password" className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
                 style={{ color: 'var(--text-muted)' }}>Password</label>
               <div className="relative">
                 <input
+                  id="auth-password"
                   type={showPass ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
