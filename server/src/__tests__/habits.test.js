@@ -106,7 +106,7 @@ describe('POST /api/habits', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.habit.color).toBe('#10B981');
-    expect(res.body.habit.icon).toBe('Leaf');
+    expect(res.body.habit.icon).toBe('📌');
     expect(res.body.habit.frequency).toEqual({ type: 'daily' });
   });
 
